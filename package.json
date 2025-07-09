@@ -12,9 +12,15 @@
     "deploy:sandbox": "npx ampx sandbox",
     "deploy:once": "npx ampx sandbox --once",
     "deploy:delete": "npx ampx sandbox delete",
+    "deploy:pipeline": "npx ampx pipeline-deploy",
     "setup-aws": "./setup-aws.sh",
     "status": "./check-status.sh",
-    "amplify:info": "npx ampx info"
+    "amplify:info": "npx ampx info",
+    "amplify:bootstrap": "npx cdk bootstrap",
+    "amplify:check-types": "cd amplify && npx tsc --noEmit",
+    "verify-fixes": "./verify-fixes.sh",
+    "build:amplify": "npm run build",
+    "test:ci": "npm run lint"
   },
   "dependencies": {
     "@aws-amplify/ui-react": "^6.0.0",

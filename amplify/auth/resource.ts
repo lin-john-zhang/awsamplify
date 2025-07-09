@@ -16,22 +16,18 @@ export const auth = defineAuth({
   userAttributes: {
     'custom:department': {
       dataType: 'String',
-      required: false,
       mutable: true
     },
     'custom:role': {
       dataType: 'String', 
-      required: false,
       mutable: true
     },
     'custom:team_id': {
       dataType: 'String',
-      required: false,
       mutable: true
     },
     'custom:access_level': {
       dataType: 'Number',
-      required: false,
       mutable: true
     }
   },

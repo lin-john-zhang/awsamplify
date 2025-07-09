@@ -9,15 +9,15 @@ export const storage = defineStorage({
       allow.authenticated.to(['read', 'write', 'delete'])
     ],
     
-    // Protected access - everyone can read, only the owner can write/delete
-    'protected/*': [
+    // Protected access - everyone can read, only the resource owner can write/delete
+    'protected/{entity_id}/*': [
       allow.authenticated.to(['read']),
-      allow.owner.to(['read', 'write', 'delete'])
+      allow.entity('identity').to(['read', 'write', 'delete'])
     ],
     
-    // Private access - only the owner can access
+    // Private access - only the resource owner can access
     'private/{entity_id}/*': [
-      allow.owner.to(['read', 'write', 'delete'])
+      allow.entity('identity').to(['read', 'write', 'delete'])
     ],
     
     // Group-based access patterns
@@ -34,20 +34,20 @@ export const storage = defineStorage({
       allow.groups(['Moderators']).to(['read'])
     ],
     
-    // Department-based access using custom attributes
-    'departments/{custom:department}/*': [
-      allow.owner.to(['read', 'write', 'delete'])
+    // User-specific workspace
+    'workspace/{entity_id}/*': [
+      allow.entity('identity').to(['read', 'write', 'delete'])
     ],
     
-    // Shared workspace access
-    'shared/team-{custom:team_id}/*': [
+    // Shared team content
+    'shared/teams/*': [
       allow.authenticated.to(['read']),
-      allow.owner.to(['read', 'write', 'delete'])
+      allow.groups(['Admins', 'Moderators']).to(['read', 'write', 'delete'])
     ],
     
     // Upload staging area - temporary upload location
     'uploads/staging/{entity_id}/*': [
-      allow.owner.to(['write', 'delete']),
+      allow.entity('identity').to(['write', 'delete']),
       allow.groups(['Admins']).to(['read', 'write', 'delete'])
     ],
     

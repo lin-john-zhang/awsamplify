@@ -76,7 +76,45 @@ fi
 
 AWS_ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
 AWS_REGION=$(aws configure get region)
-print_success "AWS credentials valid. Account: $AWS_ACCOUNT, Region: $AWS_REGION"
+# Check if CDK is bootstrapped
+print_status "Checking CDK bootstrap status..."
+if aws cloudformation describe-stacks --stack-name CDKToolkit &> /dev/null; then
+    print_success "CDK is already bootstrapped in this region"
+else
+    print_warning "CDK is not bootstrapped in this region"
+    echo ""
+    echo "AWS CDK needs to be bootstrapped before deployment."
+    echo "This is a one-time setup for your AWS account/region."
+    echo ""
+    read -p "Bootstrap CDK now? This requires admin permissions (y/N): " bootstrap_confirm
+    if [[ $bootstrap_confirm =~ ^[Yy]$ ]]; then
+        print_status "Bootstrapping CDK..."
+        if npx cdk bootstrap; then
+            print_success "CDK bootstrap completed successfully"
+        else
+            print_error "CDK bootstrap failed. You may need:"
+            echo "  1. Admin/Root user permissions"
+            echo "  2. Different AWS region"
+            echo "  3. Use Amplify Console instead for deployment"
+            echo ""
+            echo "Alternative: Use Amplify Console for deployment (no bootstrap required)"
+            exit 1
+        fi
+    else
+        print_warning "Skipping CDK bootstrap"
+        echo ""
+        echo "Without CDK bootstrap, you can:"
+        echo "1. Ask an admin to run: npx cdk bootstrap"
+        echo "2. Use Amplify Console for deployment"
+        echo "3. Switch to a different AWS region"
+        echo ""
+        read -p "Continue anyway? (y/N): " continue_confirm
+        if [[ ! $continue_confirm =~ ^[Yy]$ ]]; then
+            print_status "Deployment cancelled"
+            exit 0
+        fi
+    fi
+fi
 
 # Install dependencies if needed
 if [ ! -d "node_modules" ]; then
