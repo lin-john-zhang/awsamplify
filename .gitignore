@@ -1,0 +1,169 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Dependency directories
+jspm_packages/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Vercel
+.vercel
+
+# AWS Amplify
+.amplify/
+amplify_outputs*
+amplifyconfiguration*
+aws-exports.js
+amplify/mock-data/
+amplify/mock-api-resources.json
+amplify/backend/amplify-meta.json
+amplify/backend/awscloudformation
+amplify/backend/.temp
+amplify/#current-cloud-backend
+amplify/cli.json
+amplify/team-provider-info.json
+amplify/.config/local-*
+
+# AWS CDK
+cdk.out/
+.cdk.staging/
+
+# AWS CLI
+.aws/
+
+# Terraform
+*.tfstate
+*.tfstate.*
+.terraform/
+.terraform.lock.hcl
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+logs
+*.log
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Temporary folders
+tmp/
+temp/
+
+# Build outputs
+build/
+dist/
+out/
+
+# Testing
+coverage/
+.coverage
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Documentation builds
+docs/_build/
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# Cache directories
+.cache/
+.parcel-cache/
+
+# Local development files
+.local/
+.vscode/settings.json
+.devcontainer/
+
+# Security
+*.pem
+*.key
+*.crt
+secrets.json
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Miscellaneous
+*.zip
+*.tar.gz
+*.rar
+
+# Development & Experimental
+poc/
+prototype/
+experimental/
+draft/
+test-*/
+*-test/

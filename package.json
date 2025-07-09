@@ -1,0 +1,39 @@
+{
+  "name": "aws-amplify-permissions-demo",
+  "version": "1.0.0",
+  "description": "AWS Amplify project demonstrating various permission setups for backend services",
+  "main": "index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "deploy": "./deploy.sh",
+    "deploy:sandbox": "npx ampx sandbox",
+    "deploy:once": "npx ampx sandbox --once",
+    "deploy:delete": "npx ampx sandbox delete",
+    "setup-aws": "./setup-aws.sh",
+    "status": "./check-status.sh",
+    "amplify:info": "npx ampx info"
+  },
+  "dependencies": {
+    "@aws-amplify/ui-react": "^6.0.0",
+    "aws-amplify": "^6.15.3",
+    "next": "^14.0.0",
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0"
+  },
+  "devDependencies": {
+    "@aws-amplify/backend": "^1.16.1",
+    "@aws-amplify/backend-cli": "^1.8.0",
+    "@aws-amplify/cli": "^12.0.0",
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0",
+    "aws-cdk-lib": "^2.189.1",
+    "constructs": "^10.4.2",
+    "esbuild": "^0.25.6",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}

@@ -1,0 +1,526 @@
+# GraphQL Schema with Comprehensive Authorization
+
+type User
+  @model
+  @auth(
+    rules: [
+      { allow: owner, ownerField: "id" }
+      { allow: groups, groups: ["Admins"] }
+    ]
+  ) {
+  id: ID!
+  username: String!
+    @auth(
+      rules: [
+        { allow: owner }
+        { allow: groups, groups: ["Admins", "Moderators"] }
+      ]
+    )
+  email: AWSEmail!
+    @auth(rules: [{ allow: owner }, { allow: groups, groups: ["Admins"] }])
+  firstName: String
+  lastName: String
+  bio: String @auth(rules: [{ allow: public, operations: [read] }])
+  avatar: String @auth(rules: [{ allow: public, operations: [read] }])
+
+  # Admin-only fields
+  status: UserStatus @auth(rules: [{ allow: groups, groups: ["Admins"] }])
+  role: UserRole @auth(rules: [{ allow: groups, groups: ["Admins"] }])
+  lastLogin: AWSDateTime @auth(rules: [{ allow: groups, groups: ["Admins"] }])
+  loginCount: Int @auth(rules: [{ allow: groups, groups: ["Admins"] }])
+
+  # Personal preferences
+  preferences: UserPreferences @auth(rules: [{ allow: owner }])
+
+  # Relationships
+  posts: [Post] @hasMany(indexName: "byAuthor", fields: ["id"])
+  comments: [Comment] @hasMany(indexName: "byUser", fields: ["id"])
+  groups: [UserGroup] @manyToMany(relationName: "UserGroupMembers")
+
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+type UserPreferences {
+  theme: String
+  language: String
+  notifications: NotificationSettings
+  privacy: PrivacySettings
+}
+
+type NotificationSettings {
+  email: Boolean
+  push: Boolean
+  sms: Boolean
+}
+
+type PrivacySettings {
+  profileVisible: Boolean
+  showEmail: Boolean
+  showLastLogin: Boolean
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+# Posts with multi-level authorization
+type Post
+  @model
+  @auth(
+    rules: [
+      { allow: owner, operations: [create, update, delete] }
+      {
+        allow: groups
+        groups: ["Moderators"]
+        operations: [read, update, delete]
+      }
+      { allow: groups, groups: ["Users"], operations: [read] }
+      { allow: public, provider: apiKey, operations: [read] }
+    ]
+  ) {
+  id: ID!
+  title: String!
+  content: String!
+  excerpt: String
+
+  # Content moderation
+  status: PostStatus! @default(value: "DRAFT")
+  moderationStatus: ModerationStatus
+    @auth(rules: [{ allow: groups, groups: ["Moderators", "Admins"] }])
+    @default(value: "PENDING")
+  moderationNotes: String
+    @auth(rules: [{ allow: groups, groups: ["Moderators", "Admins"] }])
+
+  # Publishing controls
+  published: Boolean! @default(value: false)
+  publishedAt: AWSDateTime
+  scheduledFor: AWSDateTime @auth(rules: [{ allow: owner }])
+
+  # Metadata
+  tags: [String]
+  category: String
+  featuredImage: String
+  readingTime: Int
+  viewCount: Int @auth(rules: [{ allow: public, operations: [read] }])
+
+  # Relationships
+  authorId: ID! @index(name: "byAuthor")
+  author: User @belongsTo(fields: ["authorId"])
+  comments: [Comment] @hasMany(indexName: "byPost", fields: ["id"])
+
+  # Engagement
+  likes: [PostLike] @hasMany(indexName: "byPost", fields: ["id"])
+  likeCount: Int @default(value: 0)
+
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum PostStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  DELETED
+}
+
+enum ModerationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  FLAGGED
+}
+
+# Comments with hierarchical permissions
+type Comment
+  @model
+  @auth(
+    rules: [
+      { allow: owner, operations: [create, update, delete] }
+      {
+        allow: groups
+        groups: ["Moderators"]
+        operations: [read, update, delete]
+      }
+      { allow: groups, groups: ["Users"], operations: [read] }
+      { allow: public, provider: apiKey, operations: [read] }
+    ]
+  ) {
+  id: ID!
+  content: String!
+
+  # Moderation
+  status: CommentStatus! @default(value: "ACTIVE")
+  moderationStatus: ModerationStatus
+    @auth(rules: [{ allow: groups, groups: ["Moderators", "Admins"] }])
+    @default(value: "APPROVED")
+  flagged: Boolean @default(value: false)
+  flagCount: Int @default(value: 0)
+
+  # Threading
+  parentId: ID @index(name: "byParent")
+  parent: Comment @belongsTo(fields: ["parentId"])
+  replies: [Comment] @hasMany(indexName: "byParent", fields: ["id"])
+  level: Int @default(value: 0)
+
+  # Relationships
+  postId: ID! @index(name: "byPost")
+  post: Post @belongsTo(fields: ["postId"])
+  userId: ID! @index(name: "byUser")
+  user: User @belongsTo(fields: ["userId"])
+
+  # Engagement
+  likes: [CommentLike] @hasMany(indexName: "byComment", fields: ["id"])
+  likeCount: Int @default(value: 0)
+
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum CommentStatus {
+  ACTIVE
+  HIDDEN
+  DELETED
+}
+
+# Like system with owner restrictions
+type PostLike
+  @model
+  @auth(
+    rules: [
+      { allow: owner }
+      {
+        allow: groups
+        groups: ["Moderators", "Admins"]
+        operations: [read, delete]
+      }
+    ]
+  ) {
+  id: ID!
+  postId: ID! @index(name: "byPost")
+  post: Post @belongsTo(fields: ["postId"])
+  userId: ID! @index(name: "byUser")
+  user: User @belongsTo(fields: ["userId"])
+  createdAt: AWSDateTime!
+}
+
+type CommentLike
+  @model
+  @auth(
+    rules: [
+      { allow: owner }
+      {
+        allow: groups
+        groups: ["Moderators", "Admins"]
+        operations: [read, delete]
+      }
+    ]
+  ) {
+  id: ID!
+  commentId: ID! @index(name: "byComment")
+  comment: Comment @belongsTo(fields: ["commentId"])
+  userId: ID! @index(name: "byUser")
+  user: User @belongsTo(fields: ["userId"])
+  createdAt: AWSDateTime!
+}
+
+# Group-based access control
+type UserGroup
+  @model
+  @auth(
+    rules: [
+      {
+        allow: groups
+        groups: ["Admins"]
+        operations: [create, update, delete]
+      }
+      { allow: groups, groups: ["Moderators"], operations: [read] }
+      { allow: groups, groupsField: "members", operations: [read] }
+    ]
+  ) {
+  id: ID!
+  name: String!
+  description: String
+  type: GroupType!
+
+  # Group permissions
+  permissions: [String] @auth(rules: [{ allow: groups, groups: ["Admins"] }])
+  maxMembers: Int
+  isPrivate: Boolean @default(value: false)
+
+  # Membership
+  members: [User] @manyToMany(relationName: "UserGroupMembers")
+  adminIds: [ID] @auth(rules: [{ allow: groups, groups: ["Admins"] }])
+  moderatorIds: [ID] @auth(rules: [{ allow: groups, groups: ["Admins"] }])
+
+  # Group content
+  posts: [GroupPost] @hasMany(indexName: "byGroup", fields: ["id"])
+
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum GroupType {
+  PUBLIC
+  PRIVATE
+  RESTRICTED
+}
+
+# Group-specific posts
+type GroupPost
+  @model
+  @auth(
+    rules: [
+      { allow: groups, groupsField: "groupMembers", operations: [read] }
+      { allow: owner, operations: [create, update, delete] }
+      { allow: groups, groups: ["Admins"], operations: [read, update, delete] }
+    ]
+  ) {
+  id: ID!
+  title: String!
+  content: String!
+
+  # Group association
+  groupId: ID! @index(name: "byGroup")
+  group: UserGroup @belongsTo(fields: ["groupId"])
+  groupMembers: [String] # Computed field for group members
+  # Author
+  authorId: ID! @index(name: "byAuthor")
+  author: User @belongsTo(fields: ["authorId"])
+
+  # Visibility
+  pinned: Boolean @default(value: false)
+  allowComments: Boolean @default(value: true)
+
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+# Administrative data with strict access control
+type AdminLog @model @auth(rules: [{ allow: groups, groups: ["Admins"] }]) {
+  id: ID!
+  action: String!
+  resourceType: String!
+  resourceId: String
+  userId: ID!
+  userEmail: String!
+  details: AWSJSON
+  ipAddress: String
+  userAgent: String
+  timestamp: AWSDateTime!
+  severity: LogSeverity!
+}
+
+enum LogSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+# System settings with admin-only access
+type SystemSetting
+  @model
+  @auth(rules: [{ allow: groups, groups: ["Admins"] }]) {
+  id: ID!
+  key: String! @index(name: "byKey", queryField: "settingByKey")
+  value: String!
+  type: SettingType!
+  description: String
+  category: String
+  isPublic: Boolean @default(value: false)
+  updatedBy: String!
+  updatedAt: AWSDateTime!
+}
+
+enum SettingType {
+  STRING
+  NUMBER
+  BOOLEAN
+  JSON
+}
+
+# File metadata with path-based access control
+type FileMetadata
+  @model
+  @auth(
+    rules: [
+      { allow: owner, ownerField: "uploadedBy" }
+      { allow: groups, groups: ["Admins"] }
+      { allow: groups, groupsField: "accessGroups", operations: [read] }
+    ]
+  ) {
+  id: ID!
+  filename: String!
+  originalName: String!
+  mimeType: String!
+  size: Int!
+
+  # Storage information
+  bucket: String!
+  key: String!
+  accessLevel: StorageAccessLevel!
+
+  # Access control
+  uploadedBy: ID! @index(name: "byUploader")
+  uploader: User @belongsTo(fields: ["uploadedBy"])
+  accessGroups: [String]
+  isPublic: Boolean @default(value: false)
+
+  # Metadata
+  tags: [String]
+  description: String
+  category: String
+
+  # Processing status
+  processed: Boolean @default(value: false)
+  thumbnailGenerated: Boolean @default(value: false)
+  virusScanned: Boolean @default(value: false)
+  scanResult: String
+
+  # Statistics
+  downloadCount: Int @default(value: 0)
+  lastAccessed: AWSDateTime
+
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum StorageAccessLevel {
+  PUBLIC
+  PROTECTED
+  PRIVATE
+}
+
+# Analytics data with restricted access
+type Analytics
+  @model
+  @auth(rules: [{ allow: groups, groups: ["Admins", "Moderators"] }]) {
+  id: ID!
+  type: AnalyticsType!
+  resourceId: String
+  userId: String
+  value: Float!
+  metadata: AWSJSON
+  timestamp: AWSDateTime!
+
+  # Aggregation fields
+  day: String @index(name: "byDay", queryField: "analyticsByDay")
+  week: String @index(name: "byWeek", queryField: "analyticsByWeek")
+  month: String @index(name: "byMonth", queryField: "analyticsByMonth")
+}
+
+enum AnalyticsType {
+  PAGE_VIEW
+  USER_LOGIN
+  POST_VIEW
+  FILE_DOWNLOAD
+  API_CALL
+  ERROR_RATE
+}
+
+# Custom resolvers and subscriptions
+
+# Real-time notifications with user-specific subscriptions
+type Notification
+  @model
+  @auth(rules: [{ allow: owner, ownerField: "userId" }]) {
+  id: ID!
+  userId: ID! @index(name: "byUser")
+  user: User @belongsTo(fields: ["userId"])
+
+  type: NotificationType!
+  title: String!
+  message: String!
+  data: AWSJSON
+
+  read: Boolean @default(value: false)
+  readAt: AWSDateTime
+
+  # Delivery tracking
+  sent: Boolean @default(value: false)
+  sentAt: AWSDateTime
+  channel: NotificationChannel
+
+  createdAt: AWSDateTime!
+  updatedAt: AWSDateTime!
+}
+
+enum NotificationType {
+  COMMENT
+  LIKE
+  FOLLOW
+  MENTION
+  SYSTEM
+  SECURITY
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  PUSH
+  SMS
+}
+
+# Custom mutations and queries
+
+# Custom query for user statistics (admin only)
+type UserStatistics {
+  totalUsers: Int!
+  activeUsers: Int!
+  newUsersToday: Int!
+  newUsersThisWeek: Int!
+  newUsersThisMonth: Int!
+  usersByStatus: AWSJSON!
+  usersByRole: AWSJSON!
+}
+
+# Custom query for content statistics
+type ContentStatistics {
+  totalPosts: Int!
+  publishedPosts: Int!
+  draftPosts: Int!
+  totalComments: Int!
+  pendingModeration: Int!
+  flaggedContent: Int!
+  postsToday: Int!
+  commentsToday: Int!
+}
+
+# Subscriptions with authorization
+type Subscription {
+  # User-specific notifications
+  onNotificationCreated(userId: ID!): Notification
+    @aws_subscribe(mutations: ["createNotification"])
+    @aws_auth(cognito_groups: ["Users", "Moderators", "Admins"])
+
+  # Group-specific updates
+  onGroupPostCreated(groupId: ID!): GroupPost
+    @aws_subscribe(mutations: ["createGroupPost"])
+    @aws_auth(cognito_groups: ["Users", "Moderators", "Admins"])
+
+  # Admin-only system events
+  onAdminLogCreated: AdminLog
+    @aws_subscribe(mutations: ["createAdminLog"])
+    @aws_auth(cognito_groups: ["Admins"])
+
+  # Real-time comment updates
+  onCommentCreated(postId: ID!): Comment
+    @aws_subscribe(mutations: ["createComment"])
+    @aws_auth(cognito_groups: ["Users", "Moderators", "Admins"])
+
+  # Moderation events
+  onModerationUpdate: Post
+    @aws_subscribe(mutations: ["updatePost"])
+    @aws_auth(cognito_groups: ["Moderators", "Admins"])
+}
